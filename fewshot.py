@@ -1,24 +1,3 @@
-"""
-fewshot.py
-----------
-No GPU time for real fine-tuning today, so accuracy improvements come
-from two things instead:
-
-1. A curated bank of BASE_EXAMPLES covering the edge cases that trip up
-   zero-shot prompting (ambiguous urgency, non-emergencies, multiple
-   people, infrastructure hazards vs. direct danger).
-2. A growing bank of operator CORRECTIONS (saved from the dashboard's
-   "Fix this" form). Every time you correct a wrong triage, it's stored
-   in SQLite and, from then on, the most relevant corrections are
-   prepended to future prompts as extra few-shot examples.
-
-This is in-context learning / retrieval-augmented prompting, not
-weight updates — but on a CPU-only laptop with hours (not days) to
-work with, it's the fastest way to visibly improve accuracy, and it
-gives you a genuine "the system learns from operator feedback, fully
-offline" story for judges.
-"""
-
 import re
 
 import db
@@ -135,14 +114,7 @@ def _format_example(ex: dict) -> str:
 
 
 def build_prompt(message_text: str, use_corrections: bool = True) -> str:
-    """
-    Builds the full user-turn prompt: a handful of relevant examples
-    followed by the actual message to analyze. The Modelfile's SYSTEM
-    prompt still enforces the JSON schema — this just anchors the model
-    on concrete input/output pairs, which measurably reduces schema
-    drift and misjudged urgency on a base (non-fine-tuned) model.
-    """
-    examples = list(BASE_EXAMPLES[:4])  # a bit more headroom than the i3 build allowed
+    examples = list(BASE_EXAMPLES[:4])
     if use_corrections:
         examples += _most_relevant_corrections(message_text, k=3)
 

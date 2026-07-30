@@ -9,14 +9,12 @@ from typing import Optional
 import openai
 import fewshot
 
-# Configure Groq API (using OpenAI SDK)
 client = openai.OpenAI(
     api_key=os.getenv("HF_API_KEY"),
     base_url="https://router.huggingface.co/v1"
 )
 
-# Use Gemma on Hugging Face Serverless API
-MODEL_NAME = "google/gemma-2-9b-it:featherless-ai"  # or :together, :fireworks-ai, :nebius, etc. — whatever the model page lists
+MODEL_NAME = "google/gemma-2-9b-it"
 
 URGENCY_RANK = {"high": 0, "medium": 1, "low": 2}
 REQUIRED_KEYS = [
@@ -114,7 +112,6 @@ def analyze_emergency_message(
             # Ensure enums
             parsed = json.loads(content)
             db.log_api_call(model_name, success=True)
-            # Robustly coerce is_emergency (Gemini may return true/false, "true"/"false", or omit it)
             raw_flag = parsed.get("is_emergency", True)
             if isinstance(raw_flag, str):
                 is_emergency = raw_flag.strip().lower() in ("true", "yes", "1")

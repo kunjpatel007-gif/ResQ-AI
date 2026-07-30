@@ -63,7 +63,7 @@ def get_clusters():
 
 @app.get("/api/quota")
 def get_quota():
-    """Local tracker for the Gemini free-tier daily request limit."""
+    """Local tracker for the API free-tier daily request limit."""
     return db.get_quota_status()
     
 @app.get("/api/telemetry")
@@ -174,7 +174,7 @@ def test_analyze(payload: TestPayload):
     if not msg:
         return {"error": "No message provided"}
         
-    # Runs inference via Groq API (requires internet)
+    # Runs inference via API
     record = analyze_emergency_message(msg, source="manual_ui")
     db.insert_record(record)
     

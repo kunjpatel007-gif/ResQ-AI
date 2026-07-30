@@ -1,12 +1,3 @@
-"""
-db.py
------
-A tiny SQLite layer that lets two separate local processes — the
-Streamlit dashboard and the FastAPI webhook — share one triage queue
-without any network service beyond a file on disk. SQLite's default
-locking is more than enough for a single-laptop hackathon demo.
-"""
-
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -188,9 +179,9 @@ def fetch_corrections(limit: int = 200):
         ).fetchall()
         return [dict(r) for r in rows]
 
-# --- API quota tracking (local counter, since Gemini free tier gives no live quota endpoint) ---
+# --- API quota tracking (local counter) ---
 
-DAILY_QUOTA_LIMIT = 14400  # Groq free tier limit
+DAILY_QUOTA_LIMIT = 14400  # API free tier limit
 
 def log_api_call(model: str, success: bool):
     with get_conn() as conn:
