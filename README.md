@@ -69,12 +69,6 @@ graph TD
 
 ---
 
-## Links
-
-- **GitHub repo:** [Insert link]
-- **Dataset(s) used:** Proprietary custom few-shot examples and simulated disaster feeds.
-- **Demo:** [Insert link]
-- **License for this project:** Apache 2.0
 
 ---
 
