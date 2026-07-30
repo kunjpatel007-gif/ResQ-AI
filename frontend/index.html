@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEMMA ECC | Emergency Control Center</title>
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo-container">
+                <i class="fa-solid fa-satellite-dish logo-icon"></i>
+                <h1 class="logo-text">GEMMA ECC</h1>
+            </div>
+            
+            <ul class="nav-links">
+                <li class="nav-item active" data-view="incident-monitor">
+                    <i class="fa-solid fa-chart-line"></i> Incident Monitor
+                </li>
+                <li class="nav-item" data-view="map-view">
+                    <i class="fa-regular fa-map"></i> Map View
+                </li>
+                <li class="nav-item" data-view="resource-mgmt">
+                    <i class="fa-solid fa-cube"></i> Resource Mgmt
+                </li>
+                <li class="nav-item" data-view="settings">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </li>
+            </ul>
+
+            <div class="sidebar-bottom">
+                <div class="local-status">
+                    <div class="status-indicator yellow"></div>
+                    <span id="sidebar-cloud-status">API ACTIVE</span>
+                </div>
+                <div class="user-profile">
+                    <img src="https://ui-avatars.com/api/?name=CO&background=0D8ABC&color=fff" alt="User">
+                    <div class="user-info">
+                        <strong>Chief Operator</strong>
+                        <span>ID-4882-ECC</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="uptime">SYSTEM UPTIME: <span id="uptime-counter">00:00:00</span></span>
+                </div>
+                <div class="topbar-right">
+                    <div class="alert-badge"><i class="fa-solid fa-asterisk"></i> <span id="active-emergencies-count">0</span> ACTIVE EMERGENCIES</div>
+                    <button class="btn-outline" onclick="fetchIncidents()"><i class="fa-solid fa-rotate"></i> Manual Sync</button>
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                </div>
+            </header>
+
+            <!-- View 1: Incident Monitor -->
+            <div id="view-incident-monitor" class="view active">
+                <div class="grid-2-col">
+                    <!-- Feed Column -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title"><i class="fa-solid fa-filter"></i> Live Triage Feed <span class="badge-syncing">• SYNCING</span></div>
+                            <div class="panel-actions">
+                                <button class="btn-small">! Urgency</button>
+                                <button class="btn-small"><i class="fa-solid fa-layer-group"></i> Type</button>
+                                <button class="btn-small"><i class="fa-solid fa-location-dot"></i> Location</button>
+                            </div>
+                        </div>
+                        <div class="feed-container" id="triage-feed">
+                            <!-- Populated by JS -->
+                        </div>
+                        <div class="test-input-container">
+                            <input type="text" id="test-message-input" placeholder="Type a mock emergency message (e.g. 'Fire on 5th avenue, 2 trapped')...">
+                            <button id="test-submit-btn" class="btn-primary" onclick="submitTestMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                    
+                    <!-- Side Panel -->
+                    <div class="side-column">
+                        <div class="panel">
+                            <div class="panel-header small">LOCATOR MAP</div>
+                            <div class="map-placeholder">
+                                <div class="pulse-ring"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="panel">
+                            <div class="panel-header small">Active Selection</div>
+                            <h3 class="selection-id" id="active-sel-id">Select an incident</h3>
+                            
+                            <div class="ai-analysis-box">
+                                <div class="box-header">AI ANALYSIS</div>
+                                <p id="active-ai-action">Select an incident to view AI recommendations.</p>
+                                <div class="confidence-bar">
+                                    <span>CONFIDENCE SCORE</span>
+                                    <span>94%</span>
+                                </div>
+                                <div class="progress-bg"><div class="progress-fill" style="width: 94%"></div></div>
+                            </div>
+                            
+                            <div class="panel-header small mt-4">RECOMMENDED RESOURCES</div>
+                            <ul class="resource-list" id="active-resources">
+                                <li>Select an incident.</li>
+                            </ul>
+                            
+                            <button id="btn-deploy-rescue" class="btn-danger full-width mt-4" onclick="handleDeploy(this)"><i class="fa-solid fa-rocket"></i> DEPLOY RESCUE TEAM</button>
+                            <button id="btn-standby" class="btn-dark full-width mt-2" onclick="handleStandby(this)">Acknowledge / Standby</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View 2: Map View -->
+            <div id="view-map-view" class="view hidden">
+                <div class="full-map-container">
+                    <div id="live-map"></div>
+                    <div class="map-overlay-panel">
+                        <h2 id="cluster-name">Select a Cluster</h2>
+                        <div class="alert-badge inline" id="cluster-risk">Awaiting Selection</div>
+                        
+                        <div class="ai-analysis-box mt-4">
+                            <div class="box-header">AI DAMAGE ASSESSMENT</div>
+                            <p id="cluster-assessment">Click a map marker to view structural damage assessments and AI response insights.</p>
+                        </div>
+                        
+                        <div class="stats-grid mt-4">
+                            <div class="stat-box">
+                                <span class="stat-label">IMPACT RADIUS</span>
+                                <span class="stat-value" id="cluster-radius">--</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">EST. CIVILIANS</span>
+                                <span class="stat-value" id="cluster-civilians">--</span>
+                            </div>
+                        </div>
+                        <button id="btn-evac" class="btn-danger full-width mt-4" onclick="handleEvac(this)"><i class="fa-solid fa-bullhorn"></i> EVAC ORDER</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View 3: Resource Management -->
+            <div id="view-resource-mgmt" class="view hidden">
+                <div class="panel-header no-border">
+                    <h1>Resource Management</h1>
+                    <span class="badge-syncing yellow">• ASSET TRACKING ACTIVE</span>
+                </div>
+                
+                <div class="metrics-grid mt-4" id="resource-metrics">
+                    <!-- Populated by JS -->
+                </div>
+                
+                <div class="grid-2-col mt-4">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">Active Deployments</div>
+                            <button id="btn-new-deployment" class="btn-primary" onclick="handleNewDeployment(this)">NEW DEPLOYMENT</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>UNIT ID / PERS</th>
+                                    <th>TYPE</th>
+                                    <th>STATUS</th>
+                                    <th>ETA</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deployments-table">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="side-column">
+                        <div class="panel highlight-border">
+                            <div class="panel-header small"><i class="fa-solid fa-leaf"></i> AI Action Intel <span class="dim">GEMMA v3.0</span></div>
+                            <div class="intel-card">
+                                <div class="intel-header">
+                                    <span id="intel-title" class="text-danger">URGENT DEPLOYMENT</span>
+                                    <span id="intel-confidence">98% CONFIDENCE</span>
+                                </div>
+                                <p id="dynamic-intel-text">Re-routing available standby units based on localized flood risk parameters.</p>
+                                <div class="intel-actions">
+                                    <button class="btn-text" onclick="this.parentElement.parentElement.style.display='none'">DISMISS</button>
+                                    <button id="btn-intel-execute" class="btn-text highlight" onclick="handleIntelExecute(this)">EXECUTE</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View 4: Settings -->
+            <div id="view-settings" class="view hidden">
+                <div class="panel-header no-border">
+                    <h1>System Settings</h1>
+                    <p class="subtitle">Manage system parameters, local LLM performance, and offline synchronization states.</p>
+                </div>
+                
+                <div class="grid-2-col mt-4">
+                    <div class="settings-column">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div class="panel-title"><i class="fa-solid fa-plug"></i> Operating Mode</div>
+                                <div class="toggle-switch active"></div>
+                            </div>
+                            <div class="mode-box">
+                                <h3><i class="fa-solid fa-cloud"></i> <span id="config-provider-name">Execution Backend</span></h3>
+                                <p id="config-provider-desc">Loading system configuration...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="panel mt-4">
+                            <div class="panel-header">
+                                <div class="panel-title"><i class="fa-solid fa-sliders"></i> Model Parameters</div>
+                                <span class="dim">v3.0-4b</span>
+                            </div>
+                            <div class="param-grid">
+                                <div class="param-input">
+                                    <label>CONTEXT WINDOW</label>
+                                    <input type="text" value="8,192 Tokens" readonly>
+                                </div>
+                                <div class="param-input">
+                                    <label>TEMPERATURE</label>
+                                    <input type="text" value="0.1 (Low Variance)" readonly>
+                                </div>
+                            </div>
+                            <button class="btn-dark mt-4 full-width"><i class="fa-solid fa-rotate-right"></i> RELOAD MODEL</button>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-column">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div class="panel-title"><i class="fa-solid fa-microchip"></i> Local Telemetry</div>
+                            </div>
+                            <div class="telemetry-stat mt-4">
+                                <div class="stat-header">
+                                    <span>CPU ALLOCATION</span>
+                                    <span id="tel-cpu">45%</span>
+                                </div>
+                                <div class="progress-bg"><div class="progress-fill blue" id="bar-cpu" style="width: 45%"></div></div>
+                            </div>
+                            <div class="telemetry-stat mt-4">
+                                <div class="stat-header">
+                                    <span>MEMORY USAGE (RAM)</span>
+                                    <span id="tel-ram">12.4 GB / 16.0 GB</span>
+                                </div>
+                                <div class="progress-bg"><div class="progress-fill yellow" id="bar-ram" style="width: 77%"></div></div>
+                            </div>
+                            <div class="telemetry-stat mt-4">
+                                <div class="stat-header">
+                                    <span>GPU LOAD (EST.)</span>
+                                    <span id="tel-gpu">80%</span>
+                                </div>
+                                <div class="progress-bg"><div class="progress-fill red" id="bar-gpu" style="width: 80%"></div></div>
+                            </div>
+                        </div>
+                        
+                        <div class="panel mt-4 terminal-panel">
+                            <div class="panel-header small">INFERENCE LOG <span class="dot"></span></div>
+                            <div class="terminal" id="terminal-log">
+                                [14:02:40] System Initialized. Waiting for inference tasks...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
